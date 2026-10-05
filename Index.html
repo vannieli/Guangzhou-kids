@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>广州遛娃情报站 · 广源新村</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;background:#f0f4f8;margin:0;color:#1a202c}
+.header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:18px;text-align:center}
+.header p{font-size:.8rem;opacity:.9;margin-top:4px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:12px;background:#fff;position:sticky;top:0;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.bar select,.bar button{padding:6px 10px;border:1px solid #ccc;border-radius:8px;font-size:.85rem}
+.bar button{background:#667eea;color:#fff;border:none}
+.stats{text-align:center;font-size:.8rem;color:#666;padding:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:14px;max-width:1100px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card h3{margin:0 0 6px;font-size:1rem}
+.meta{font-size:.8rem;color:#666}
+.tag{display:inline-block;background:#edf2f7;border-radius:6px;padding:2px 8px;font-size:.72rem;margin:3px 3px 0 0}
+.tag.free{background:#c6f6d5;color:#22543d}
+.tag.indoor{background:#bee3f8;color:#2a4365}
+.score{background:#667eea;color:#fff;border-radius:6px;padding:2px 8px;font-size:.78rem;font-weight:700}
+.rain{background:#ed8936;color:#fff;text-align:center;padding:8px;font-size:.82rem;display:none}
+.rain.show{display:block}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🎈 广州遛娃情报站</h1>
+  <p>起点：白云区广源新村 · 每周五自动更新</p>
+</div>
+<div class="rain" id="rain">🌧️ 雨天模式：只显示室内景点</div>
+<div class="bar">
+  <select id="age"><option value="all">全部年龄</option><option value="0-2">0-2岁</option><option value="3-6">3-6岁</option><option value="7-12">7-12岁</option></select>
+  <select id="scene"><option value="all">全部场景</option><option value="free">免费</option><option value="indoor">室内/雨天</option></select>
+  <button onclick="toggleRain()">🌧️ 雨天</button>
+  <button onclick="load()">🔄 刷新</button>
+</div>
+<div class="stats" id="stats"></div>
+<div class="grid" id="grid"></div>
+
+<script>
+let spots=[],rain=false;
+async function load(){
+  spots=await fetch('data/spots.json').then(r=>r.json()).catch(()=>[]);
+  render();
+}
+function render(){
+  let max=90;
+  let list=spots.filter(s=>s.driveTime<=max);
+  const age=document.getElementById('age').value;
+  const scene=document.getElementById('scene').value;
+  if(age!=='all') list=list.filter(s=>s.ageTags&&s.ageTags.includes(age));
+  if(scene==='free') list=list.filter(s=>s.free);
+  if(scene==='indoor'||rain) list=list.filter(s=>s.indoor);
+  document.getElementById('stats').textContent='共 '+list.length+' 个（总 '+spots.length+' 个）';
+  document.getElementById('grid').innerHTML=list.map(s=>`
+    <div class="card">
+      <h3>${s.name}</h3>
+      <div class="meta">🚗 ${s.driveTime}分 · ${s.area} · <span class="score">适配${s.score}</span> · ⭐${s.userScore}</div>
+      <div>
+        ${s.free?'<span class="tag free">免费</span>':''}
+        ${s.indoor?'<span class="tag indoor">室内</span>':''}
+        ${(s.tags||[]).slice(0,4).map(t=>`<span class="tag">${t}</span>`).join('')}
+      </div>
+      <div class="meta" style="margin-top:6px">${(s.facts||[]).slice(0,2).join(' / ')}</div>
+    </div>`).join('');
+}
+function toggleRain(){
+  rain=!rain;
+  document.getElementById('rain').classList.toggle('show',rain);
+  render();
+}
+document.getElementById('age').onchange=render;
+document.getElementById('scene').onchange=render;
+load();
+</script>
+</body>
+</html>
