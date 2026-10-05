@@ -1,0 +1,34 @@
+name: weekly-kids-spots
+on:
+  schedule:
+    - cron: "0 4 * * 5"   # UTC 04:00 = 北京时间 周五 12:00
+  workflow_dispatch:        # 手机上可点 Run workflow 手动跑
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 生成/刷新 spots.json
+        run: |
+          cat > gen.mjs <<'EOF'
+          // 这里先返回种子数据；以后把“高德/小红书/官号”逻辑放这
+          import fs from 'fs';
+          const seed = JSON.parse(fs.readFileSync('data/spots.json','utf8'));
+          // 示例：把分数微调，模拟“每周刷新”
+          const out = seed.map((s,i)=>({...s, score: Math.min(99, s.score + (i%2?1:0))}));
+          fs.writeFileSync('data/spots.json', JSON.stringify(out,null,2));
+          EOF
+          node gen.mjs
+      - name: 提交
+        run: |
+          git config user.email "bot@users.noreply.github.com"
+          git config user.name "weekly-bot"
+          git add data/spots.json
+          git commit -m "weekly update $(date +'%Y-%m-%d')" || echo "no change"
+          git push
+          
